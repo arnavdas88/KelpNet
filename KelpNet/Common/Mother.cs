@@ -7,24 +7,28 @@ namespace KelpNet.Common
     //一箇所でまとめて管理しておく必要がある
     public class Mother
     {
+        public static Mother Current = new Mother();
+        public static Random Dice => Current.Rnd;
+
 #if DEBUG
-        //デバッグ時はシードを固定
-        public static Random Dice = new Random(128);
+        public Random Rnd = new Random(128);
 #else
-        public static Random Dice = new Random();
+        public Random Rnd = new Random();
 #endif
-        static double Alpha, Beta, BoxMuller1, BoxMuller2;
-        static bool Flip;
-        public static double Mu = 0;
-        public static double Sigma = 1;
+
+        double Alpha, Beta, BoxMuller1, BoxMuller2;
+        bool Flip;
+        public double Mu = 0;
+        public double Sigma = 1;
 
         // 平均mu, 標準偏差sigmaの正規分布乱数を得る。Box-Muller法による。
-        public static double RandomNormal()
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public double RandomNormal()
         {
             if (!Flip)
             {
-                Alpha = Dice.NextDouble();
-                Beta = Dice.NextDouble() * Math.PI * 2;
+                Alpha = Rnd.NextDouble();
+                Beta = Rnd.NextDouble() * Math.PI * 2;
                 BoxMuller1 = Math.Sqrt(-2 * Math.Log(Alpha));
                 BoxMuller2 = Math.Sin(Beta);
             }

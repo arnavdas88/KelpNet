@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace KelpNet.Common.Tools
 {
@@ -10,17 +11,20 @@ namespace KelpNet.Common.Tools
             double localScale = 1 / Math.Sqrt(2);
             int fanIn = GetFans(array.Shape);
             double s = localScale * Math.Sqrt(2.0 / fanIn);
+            var procCount = Environment.ProcessorCount;
 
-            for (int i = 0; i < array.Data.Length; i++)
+            Parallel.For(0, procCount, (id) =>
             {
-                array.Data[i] = Normal(s) * masterScale;
-            }
-        }
+                var mother = new Mother();
+                var scale = 0.05;
+                var count = array.Data.Length;
+                for (int i = id; i < count; i += procCount)
+                {
+                    mother.Sigma = scale;
+                    array.Data[i] = mother.RandomNormal() * masterScale;
+                }
+            });
 
-        private static double Normal(double scale = 0.05)
-        {
-            Mother.Sigma = scale;
-            return Mother.RandomNormal();
         }
 
         private static int GetFans(int[] shape)

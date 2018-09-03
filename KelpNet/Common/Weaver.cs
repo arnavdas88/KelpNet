@@ -76,6 +76,13 @@ typedef REAL Real;
 
             DeviceIndex = deviceIndex;
 
+            int id=0;
+            foreach (var item in Devices)
+            {
+                Console.WriteLine($"Compute[{item.Type},{id}], {item.Name}, {item.VersionString}, Driver:{item.DriverVersion}");
+                id++;
+            }
+
             if (Devices.Length > 0)
             {
                 Context = new ComputeContext(
@@ -92,6 +99,8 @@ typedef REAL Real;
                     );
 
                 Enable = true;
+
+                Console.WriteLine("Device Initialized");
             }
         }
 
