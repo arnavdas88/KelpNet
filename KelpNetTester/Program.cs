@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime;
 using KelpNet.Common;
 using KelpNetTester.Benchmarker;
 using KelpNetTester.Tests;
@@ -11,6 +12,8 @@ namespace KelpNetTester
         [STAThread]
         static void Main(string[] args)
         {
+            var a = GCSettings.IsServerGC;
+            GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
             //全て.Net Framework上で実行したい場合はこちらをコメントアウト
             Weaver.Initialize(ComputeDeviceTypes.Gpu);
             //Weaver.Initialize(ComputeDeviceTypes.Cpu, 1); //複数デバイスがある場合は添字が必要

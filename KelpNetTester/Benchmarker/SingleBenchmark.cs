@@ -12,8 +12,8 @@ namespace KelpNetTester.Benchmarker
     class SingleBenchmark
     {
         //VGG16のLinearの最大メモリを想定
-        const int INPUT_SIZE = 25088;
-        const int OUTPUT_SIZE = 4096;
+        const int INPUT_SIZE = 7 * 7 * 512;
+        const int OUTPUT_SIZE = 40;
 
         static Stopwatch sw;
 
@@ -29,7 +29,7 @@ namespace KelpNetTester.Benchmarker
                 sum += diff;
             }
 
-            return sum;
+            return sum / a.Length;
         }
 
         public static void TestLayer(Function function, NdArray inputs)
@@ -50,27 +50,35 @@ namespace KelpNetTester.Benchmarker
             sw.Stop();
             Console.WriteLine("Backward[Cpu] : " + (sw.ElapsedTicks / (Stopwatch.Frequency / (1000L * 1000L))).ToString("n0") + "µs");
 
-            if (function is CompressibleFunction compressible)
+            if (function is CompressibleFunction compressible && compressible.SetGpuEnable(true))
             {
+                var startMs = DateTime.Now.TimeOfDay.TotalMilliseconds;
+                var fps = 0.0;
+                var frame = 0;
                 while (true)
                 {
-                    if (compressible.SetGpuEnable(true))
+                    sw.Restart();
+                    NdArray[] gradArrayGpu = function.Forward(inputs);
+                    sw.Stop();
+                    Console.WriteLine("Forward [Gpu] : " + (sw.ElapsedTicks / (Stopwatch.Frequency / (1000L * 1000L))).ToString("n0") + "µs / " + fps.ToString());
+
+                    diff = ArrayEq(gradArrayCpu[0].Data.GetArray(), gradArrayGpu[0].Data.GetArray());
+                    if (diff > 0.001)
+                        Console.WriteLine($"GPU.Data != CPU.Data {diff}");
+
+                    gradArrayGpu[0].Grad.Write(gradArrayGpu[0].Data.GetArray());
+
+                    //sw.Restart();
+                    //function.Backward(gradArrayGpu);
+                    //sw.Stop();
+                    //Console.WriteLine("Backward[Gpu] : " + (sw.ElapsedTicks / (Stopwatch.Frequency / (1000L * 1000L))).ToString("n0") + "µs");
+
+                    frame++;
+                    if (DateTime.Now.TimeOfDay.TotalMilliseconds - startMs > 250)
                     {
-                        sw.Restart();
-                        NdArray[] gradArrayGpu = function.Forward(inputs);
-                        sw.Stop();
-                        Console.WriteLine("Forward [Gpu] : " + (sw.ElapsedTicks / (Stopwatch.Frequency / (1000L * 1000L))).ToString("n0") + "µs");
-
-                        diff = ArrayEq(gradArrayCpu[0].Data, gradArrayGpu[0].Data);
-                        if (diff > 0.001)
-                            Console.WriteLine($"GPU.Data != CPU.Data {diff}");
-
-                        gradArrayGpu[0].Grad = gradArrayGpu[0].Data;
-
-                        sw.Restart();
-                        function.Backward(gradArrayGpu);
-                        sw.Stop();
-                        Console.WriteLine("Backward[Gpu] : " + (sw.ElapsedTicks / (Stopwatch.Frequency / (1000L * 1000L))).ToString("n0") + "µs");
+                        fps = frame * 4;
+                        startMs = DateTime.Now.TimeOfDay.TotalMilliseconds;
+                        frame = 0;
                     }
                 }
             }

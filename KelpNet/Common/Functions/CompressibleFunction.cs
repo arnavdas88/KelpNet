@@ -64,11 +64,19 @@ namespace KelpNet.Common.Functions
             {
                 this.SingleInputForward = this.NeedPreviousForwardGpu;
                 this.SingleOutputBackward = this.NeedPreviousBackwardGpu;
+                foreach (var item in arrays)
+                {
+                    item.Value.Switch(ComputeDeviceTypes.Gpu);
+                }
             }
             else
             {
                 this.SingleInputForward = this.NeedPreviousForwardCpu;
                 this.SingleOutputBackward = this.NeedPreviousBackwardCpu;
+                foreach (var item in arrays)
+                {
+                    item.Value.Switch(ComputeDeviceTypes.Cpu);
+                }
             }
 
             return GpuEnable;
@@ -107,6 +115,42 @@ namespace KelpNet.Common.Functions
                 this.BackwardgWKernel = program.CreateKernel(this.BackwardgWKernelName);
                 this.BackwardgXKernel = program.CreateKernel(this.BackwardgXKernelName);
             }
+        }
+
+        Dictionary<string, RealArray> arrays = new Dictionary<string, RealArray>();
+        protected RealArray CreateArray(string name, int len, ComputeMemoryFlags memoryFlag = ComputeMemoryFlags.None)
+        {
+            arrays[name] = new RealArray(len)
+            {
+                GpuMemoryFlag = memoryFlag,
+            };
+            return arrays[name];
+        }
+
+        protected NdArray SetArray(string name, NdArray arr)
+        {
+            SetArray(name + ".Grad", arr.Grad);
+            SetArray(name + ".Data", arr.Data);
+
+            return arr;
+        }
+
+        protected RealArray SetArray(string name, RealArray arr)
+        {
+            arrays[name] = arr;
+            return arr;
+        }
+
+        protected RealArray GetArray(string name)
+        {
+            return arrays[name];
+        }
+
+        protected RealArray GetArray(string name, int len, ComputeMemoryFlags memoryFlag = ComputeMemoryFlags.None)
+        {
+            if (arrays.ContainsKey(name))
+                return arrays[name];
+            return CreateArray(name, len, memoryFlag);
         }
     }
 }
