@@ -24,7 +24,6 @@ namespace KelpNet.Common.Tools
                     array.Data[i] = mother.RandomNormal() * masterScale;
                 }
             });
-
         }
 
         private static int GetFans(int[] shape)

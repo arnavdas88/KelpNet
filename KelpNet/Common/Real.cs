@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.InteropServices;
 //using RealType = System.Double;
 using RealType = System.Single;
@@ -80,32 +81,6 @@ namespace KelpNet.Common
 
     public class RealArray : IDisposable, IEnumerable, IEnumerable<Real>
     {
-        static Dictionary<Real[], bool> ManagedArray = new Dictionary<Real[], bool>();
-
-        Real[] NewArray(int count)
-        {
-            foreach (var item in ManagedArray)
-            {
-                if(!item.Value && item.Key.Length == count)
-                {
-                    ManagedArray[item.Key] = true;
-                    return item.Key;
-                }
-            }
-
-            var t = new Real[count];
-            ManagedArray.Add(t, true);
-            return t;
-        }
-
-        void DisposeArray(Real[] real)
-        {
-            if (ManagedArray.ContainsKey(real))
-            {
-                ManagedArray[real] = false;
-            }
-        }
-
         public ComputeDeviceTypes Device { get; set; }
         public ComputeMemoryFlags GpuMemoryFlag { get; set; } = ComputeMemoryFlags.ReadWrite | ComputeMemoryFlags.CopyHostPointer;
         public ComputeContext GpuComputeContext { get; } = Weaver.Context;
@@ -123,7 +98,7 @@ namespace KelpNet.Common
         public RealArray(int count)
         {
             Device = ComputeDeviceTypes.Cpu;
-            cpuData = NewArray(count);
+            cpuData = new Real[count];
             IsGpu = false;
         }
 
@@ -180,10 +155,29 @@ namespace KelpNet.Common
             return d.GetArray();
         }
 
-        public void Switch(ComputeDeviceTypes type, bool flush = true)
+        public class DeviceSwitchHandler : IDisposable
+        {
+            public bool Flush { get; set; } = true;
+
+            ComputeDeviceTypes type;
+            RealArray obj;
+
+            public DeviceSwitchHandler(RealArray obj, ComputeDeviceTypes type)
+            {
+                this.obj = obj;
+                this.type = type;
+            }
+
+            public void Dispose()
+            {
+                obj.Switch(type, Flush);
+            }
+        }
+
+        public DeviceSwitchHandler Switch(ComputeDeviceTypes type, bool flush = true)
         {
             if (Device == type)
-                return;
+                return new DeviceSwitchHandler(this, Device);
 
             switch (type)
             {
@@ -191,7 +185,7 @@ namespace KelpNet.Common
                 case ComputeDeviceTypes.Cpu:
                     IsGpu = false;
                     if (cpuData == null || cpuData.Length != gpuData.Count)
-                        cpuData = NewArray((int)gpuData.Count);
+                        cpuData = new Real[(int)gpuData.Count];
                     Weaver.CommandQueue.ReadFromBuffer(gpuData, ref cpuData, true, null);
                     if (flush)
                     {
@@ -226,7 +220,10 @@ namespace KelpNet.Common
                     break;
             }
 
+            var preDevice = Device;
             Device = type;
+
+            return new DeviceSwitchHandler(this, preDevice);
         }
 
         public ComputeBuffer<Real> GetBuffer()
@@ -309,8 +306,6 @@ namespace KelpNet.Common
             if (IsDisposed)
                 return;
 
-            if(cpuData != null)
-                DisposeArray(cpuData);
             cpuData = null;
 
             gpuData?.Dispose();
