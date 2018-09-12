@@ -118,12 +118,11 @@ namespace KelpNet.Common.Functions
         }
 
         Dictionary<string, RealArray> arrays = new Dictionary<string, RealArray>();
-        protected RealArray CreateArray(string name, int len, ComputeMemoryFlags memoryFlag = ComputeMemoryFlags.None)
+        protected RealArray CreateArray(string name, int len, ComputeMemoryFlags? memoryFlag = null)
         {
-            arrays[name] = new RealArray(len)
-            {
-                GpuMemoryFlag = memoryFlag,
-            };
+            arrays[name] = new RealArray(len);
+            if (memoryFlag != null)
+                arrays[name].GpuMemoryFlag = (ComputeMemoryFlags)memoryFlag;
             return arrays[name];
         }
 
@@ -146,7 +145,7 @@ namespace KelpNet.Common.Functions
             return arrays[name];
         }
 
-        protected RealArray GetArray(string name, int len, ComputeMemoryFlags memoryFlag = ComputeMemoryFlags.None)
+        protected RealArray GetArray(string name, int len, ComputeMemoryFlags? memoryFlag = null)
         {
             if (arrays.ContainsKey(name))
                 return arrays[name];

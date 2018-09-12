@@ -87,7 +87,10 @@ namespace Cloo
             try
             {
                 ComputeErrorCode error = ComputeErrorCode.Success;
-                Handle = CL12.CreateBuffer(context.Handle, flags, new IntPtr(Marshal.SizeOf(typeof(T)) * data.Length), dataPtr.AddrOfPinnedObject(), out error);
+                var hostPtr = dataPtr.AddrOfPinnedObject();
+                var dataSize = Marshal.SizeOf(typeof(T));
+                Handle = CL12.CreateBuffer(context.Handle, flags, new IntPtr(dataSize * data.Length), hostPtr, out error);
+
                 ComputeException.ThrowOnError(error);
             }
             finally 
